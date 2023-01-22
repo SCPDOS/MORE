@@ -1,19 +1,11 @@
-[map all ./Listings/sys.map]
+[map all ./Listings/more.map]
 [DEFAULT REL]
 BITS 64
-%include "./Include/dosMacro.mac"
-%include "./Include/dosStruc.inc"
-%include "./Include/fatStruc.inc"
-%include "./Include/dosError.inc"
-
-struc sysInitTableStruc
-    .length     resb 1
-    .numSec     resb 1
-    .resWord    resb 2
-    .firstLba   resb 8
-;---------The below is added for convenience----------
-    .bootable   resb 1  ;Flag to indicate bootable
-endstruc
-
+%include "./Include/moreinc.inc"
 %include "./Source/moremain.asm"
 %include "./Data/moredata.asm"
+;Use a 20 QWORD stack
+    dq 20 dup (0)
+stackTop:
+    align 10h
+endOfAlloc:

@@ -1,0 +1,99 @@
+
+- NASM Map file ---------------------------------------------------------------
+
+Source file:  more.asm
+Output file:  ./Binaries/MORE.COM
+
+-- Program origin -------------------------------------------------------------
+
+00000000
+
+-- Sections (summary) ---------------------------------------------------------
+
+Vstart            Start             Stop              Length    Class     Name
+               0                 0               2E0  000002E0  progbits  .text
+
+-- Sections (detailed) --------------------------------------------------------
+
+---- Section .text ------------------------------------------------------------
+
+class:     progbits
+length:                 2E0
+start:                    0
+align:                   10
+follows:   not defined
+vstart:                   0
+valign:    not defined
+vfollows:  not defined
+
+-- Symbols --------------------------------------------------------------------
+
+---- No Section ---------------------------------------------------------------
+
+Value     Name
+00000000  displayInfoIOCTL
+00000000  displayInfoIOCTL.level
+00000001  displayInfoIOCTL.res
+00000002  displayInfoIOCTL.length
+00000004  displayInfoIOCTL.ctrlFlags
+00000006  displayInfoIOCTL.mode
+00000007  displayInfoIOCTL.res2
+00000008  displayInfoIOCTL.colours
+0000000A  displayInfoIOCTL.pxlCols
+0000000C  displayInfoIOCTL.pxlRows
+0000000E  displayInfoIOCTL.charCols
+00000010  displayInfoIOCTL.charRows
+00000012  displayInfoIOCTL_size
+00000000  NUL
+00000003  ETX
+00000006  ACK
+00000007  BEL
+00000008  BSP
+00000009  TAB
+0000000A  LF
+0000000D  CR
+00000010  DLE
+00000013  DC3
+00000014  DC4
+00000015  NAK
+00000017  ETB
+0000001A  EOF
+0000001B  ESC
+00000020  SPC
+0000007F  DEL
+
+
+---- Section .text ------------------------------------------------------------
+
+Real              Virtual           Name
+               0                 0  startMain
+               2                 2  startMain.vNum
+               3                 3  startMain.cVersion
+              1E                1E  badPrintExit
+              29                29  okVersion
+              5F                5F  noioctl
+              AD                AD  memOk
+              B4                B4  bufferLoop
+              CD                CD  exitGood
+              E0                E0  exitGood.noFree
+              E7                E7  setReadSize
+              EC                EC  getNextChar
+             100               100  notCr
+             10D               10D  notLf
+             125               125  notBsp
+             147               147  notTab
+             174               174  ctrlFound
+             1C4               1C4  noMessage
+             1D1               1D1  numCols
+             1D3               1D3  numRows
+             1D5               1D5  curCol
+             1D7               1D7  curRow
+             1D9               1D9  ioctlPkt
+             1EB               1EB  badVerStr
+             1FE               1FE  crlf
+             201               201  moreStr
+             20D               20D  memErrStr
+             22D               22D  bufferPtr
+             2D5               2D5  stackTop
+             2E0               2E0  endOfAlloc
+

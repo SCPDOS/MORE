@@ -1,0 +1,252 @@
+     1                                  [map all ./Listings/more.map]
+     2                                  [DEFAULT REL]
+     3                                  BITS 64
+     4                                  %include "./Include/moreinc.inc"
+     1                              <1> ;Structures and equates for MORE.COM
+     2                              <1> 
+     3                              <1> ;Table for the below packet for IOCTL 41/AX=440Ch, BX=0001h, CX=037Fh
+     4                              <1> ;00h    BYTE    level (0 for DOS 4.x-6.0)
+     5                              <1> ;01h    BYTE    reserved (0)
+     6                              <1> ;02h    WORD    length of following data (14)
+     7                              <1> ;04h    WORD    control flags
+     8                              <1> ;   bit 0 set for blink, clear for intensity
+     9                              <1> ;   bits 1-15 reserved
+    10                              <1> ;06h    BYTE    mode type (1=text, 2=graphics)
+    11                              <1> ;07h    BYTE    reserved (0)
+    12                              <1> ;08h    WORD    colors -> 0000h = monochrome, 
+    13                              <1> ;   else N bits per pixel/character cell (8 bits in char mode default)
+    14                              <1> ;0Ah    WORD    pixel columns
+    15                              <1> ;0Ch    WORD    pixel rows
+    16                              <1> ;0Eh    WORD    character columns
+    17                              <1> ;10h    WORD    character rows
+    18                              <1> 
+    19                              <1> struc displayInfoIOCTL
+    20 00000000 ??                  <1>     .level      db ?    ;Level 0, required for DOS
+    21 00000001 ??                  <1>     .res        db ?    ;
+    22 00000002 ????                <1>     .length     dw ?    ;Length of the following bytes in the struct (0014)
+    23                              <1> ;The below get set by the driver if the request is supported
+    24 00000004 ????                <1>     .ctrlFlags  dw ?    ;Ctrl flags 
+    25 00000006 ??                  <1>     .mode       db ?    ;Mode Type
+    26 00000007 ??                  <1>     .res2       db ?    ;
+    27 00000008 ????                <1>     .colours    dw ?    ;Colours word
+    28 0000000A ????                <1>     .pxlCols    dw ?    ;Pixel Columns
+    29 0000000C ????                <1>     .pxlRows    dw ?    ;Pixel Rows
+    30 0000000E ????                <1>     .charCols   dw ?    ;Character Columns
+    31 00000010 ????                <1>     .charRows   dw ?    ;Character Rows
+    32                              <1> endstruc
+    33                              <1> 
+    34                              <1> ;MISC ASCII control chars
+    35                              <1> NUL equ 00h ;^@         | ASCII Null
+    36                              <1> ETX equ 03h ;^C         | ASCII Break (End of Text) 
+    37                              <1> ACK equ 06h ;^F         | ASCII Acknowledgement
+    38                              <1> BEL equ 07h ;^G         | ASCII Bell
+    39                              <1> BSP equ 08h ;^H         | ASCII Backspace
+    40                              <1> TAB equ 09h ;^I         | ASCII Horizontal Tab
+    41                              <1> LF  equ 0Ah ;^J         | ASCII Line Feed
+    42                              <1> CR  equ 0Dh ;^M         | ASCII Carriage Return
+    43                              <1> DLE equ 10h ;^P         | ASCII Data Link End (Toggle Print Echo)
+    44                              <1> DC3 equ 13h ;^S         | ASCII Device Control 3 (Toggle Scroll Lock)
+    45                              <1> DC4 equ 14h ;^T         | ASCII Device Control 4
+    46                              <1> NAK equ 15h ;^U         | ASCII Negative Acknowledgement
+    47                              <1> ETB equ 17h ;^W         | ASCII End of Transmission Block
+    48                              <1> EOF equ 1Ah ;^Z         | ASCII Substitute character (End of File)
+    49                              <1> ESC equ 1Bh ;           | ASCII Escape char, used for ANSI.SYS
+    50                              <1> SPC equ 20h ;Printable  | ASCII Space
+    51                              <1> ;This last one is NEVER printed with a caret as it is a console control char
+    52                              <1> DEL equ 7Fh ;^?         | ASCII Rubout (Del char and dec cursor)
+     5                                  %include "./Source/moremain.asm"
+     1                              <1> ;MORE main routine
+     2                              <1> startMain:
+     3 00000000 EB01                <1>     jmp short .cVersion
+     4 00000002 01                  <1> .vNum:  db 1
+     5                              <1> .cVersion:
+     6 00000003 488D25CB020000      <1>     lea rsp, stackTop   ;Move RSP to our internal stack
+     7                              <1> ;Do a version check since this version cannot check the number of rows/cols
+     8 0000000A FC                  <1>     cld
+     9 0000000B B430                <1>     mov ah, 30h
+    10 0000000D CD41                <1>     int 41h
+    11 0000000F 3A05EDFFFFFF        <1>     cmp al, byte [.vNum]    ;Version number 1 check
+    12 00000015 7612                <1>     jbe short okVersion
+    13 00000017 488D15CD010000      <1>     lea rdx, badVerStr
+    14                              <1> badPrintExit:
+    15 0000001E B409                <1>     mov ah, 09h
+    16 00000020 CD41                <1>     int 41h
+    17 00000022 B8FF4C0000          <1>     mov eax, 4CFFh
+    18 00000027 CD41                <1>     int 41h
+    19                              <1> okVersion:
+    20                              <1> ;Now try to get screen size parameters from STDOUT.
+    21                              <1> ; If generic IOCTL not supported, we assume a 80x25 resolution.
+    22 00000029 488D15A9010000      <1>     lea rdx, ioctlPkt   ;Struct is already zeroed
+    23 00000030 66C742020E00        <1>     mov word [rdx + displayInfoIOCTL.length], 14    ;Set block length
+    24 00000036 B80C440000          <1>     mov eax, 440Ch  ;Generic IOCTL
+    25 0000003B BB01000000          <1>     mov ebx, 1      ;STDOUT handle
+    26 00000040 B97F030000          <1>     mov ecx, 037Fh  ;Can this handle handle CON requests? (CH = 03)
+    27                              <1>     ;If so, can we get the display info? (CL = 7Fh)
+    28 00000045 CD41                <1>     int 41h
+    29 00000047 7216                <1>     jc short noioctl
+    30 00000049 0FB7420E            <1>     movzx eax, word [rdx + displayInfoIOCTL.charCols]
+    31 0000004D 6689057D010000      <1>     mov word [numCols], ax
+    32 00000054 0FB74210            <1>     movzx eax, word [rdx + displayInfoIOCTL.charRows]
+    33 00000058 66890574010000      <1>     mov word [numRows], ax
+    34                              <1> noioctl:
+    35 0000005F 488D1598010000      <1>     lea rdx, crlf
+    36 00000066 B800090000          <1>     mov eax, 0900h
+    37 0000006B CD41                <1>     int 41h
+    38                              <1> 
+    39 0000006D 31DB                <1>     xor ebx, ebx
+    40 0000006F B800450000          <1>     mov eax, 4500h  ;Dup STDIN
+    41 00000074 CD41                <1>     int 41h
+    42 00000076 0FB7E8              <1>     movzx ebp, ax   ;Save in bp to use this as read handle
+    43                              <1>     
+    44 00000079 B800460000          <1>     mov eax, 4600h  ;Close STDIN and dup STDERR into STDIN
+    45 0000007E BB02000000          <1>     mov ebx, 2      ;Handle to DUP (STDERR)
+    46 00000083 31C9                <1>     xor ecx, ecx    ;Dup to STDIN for console control
+    47 00000085 CD41                <1>     int 41h
+    48                              <1> ;Now let us resize ourselves so as to take up as little memory as possible
+    49 00000087 BB[E0020000]        <1>     mov ebx, endOfAlloc
+    50 0000008C B8004A0000          <1>     mov eax, 4A00h
+    51 00000091 CD41                <1>     int 41h ;If this fails, we still proceed as we are just being polite!
+    52                              <1> ;Now we now request a 4Kb buffer
+    53 00000093 B800480000          <1>     mov eax, 4800h
+    54 00000098 BB00010000          <1>     mov ebx, 100h   ;100h paragraphs = 4Kb buffer
+    55 0000009D CD41                <1>     int 41h
+    56 0000009F 730C                <1>     jnc memOk
+    57 000000A1 488D1565010000      <1>     lea rdx, memErrStr
+    58 000000A8 E971FFFFFF          <1>     jmp badPrintExit
+    59                              <1> memOk:
+    60 000000AD 48890579010000      <1>     mov qword [bufferPtr], rax
+    61                              <1> bufferLoop:
+    62 000000B4 488B1572010000      <1>     mov rdx, qword [bufferPtr]  ;Get ptr to buffer
+    63 000000BB B900100000          <1>     mov ecx, 1000h
+    64 000000C0 89EB                <1>     mov ebx, ebp
+    65 000000C2 B8003F0000          <1>     mov eax, 3F00h  ;Read from handle in ebp
+    66 000000C7 CD41                <1>     int 41h
+    67 000000C9 85C0                <1>     test eax, eax ;Zero byte read?
+    68 000000CB 751A                <1>     jnz short setReadSize
+    69                              <1> exitGood:
+    70 000000CD 4C8B0559010000      <1>     mov r8, qword [bufferPtr]
+    71 000000D4 4D85C0              <1>     test r8, r8 ;If null ptr, skip freeing
+    72 000000D7 7407                <1>     jz .noFree
+    73 000000D9 B800490000          <1>     mov eax, 4900h  ;Else free!
+    74 000000DE CD41                <1>     int 41h
+    75                              <1> .noFree:
+    76 000000E0 B8004C0000          <1>     mov eax, 4C00h
+    77 000000E5 CD41                <1>     int 41h
+    78                              <1> setReadSize:
+    79 000000E7 89C1                <1>     mov ecx, eax    ;Set the number of bytes to output
+    80 000000E9 4889D6              <1>     mov rsi, rdx    ;Move rsi as the source of chars
+    81                              <1> getNextChar:
+    82 000000EC AC                  <1>     lodsb   ;Get char
+    83 000000ED 3C1A                <1>     cmp al, EOF
+    84 000000EF 74DC                <1>     je short exitGood
+    85                              <1>     ;Now handle control chars as needed before going onto next char
+    86 000000F1 3C0D                <1>     cmp al, CR
+    87 000000F3 750B                <1>     jne short notCr
+    88 000000F5 66C705D70000000100  <1>     mov word [curCol], 1
+    89 000000FE EB74                <1>     jmp short ctrlFound
+    90                              <1> notCr:
+    91 00000100 3C0A                <1>     cmp al, LF
+    92 00000102 7509                <1>     jne short notLf
+    93 00000104 66FF05CC000000      <1>     inc word [curRow]
+    94 0000010B EB67                <1>     jmp short ctrlFound
+    95                              <1> notLf:
+    96 0000010D 3C08                <1>     cmp al, BSP
+    97 0000010F 7514                <1>     jne short notBsp
+    98 00000111 66813DBB0000000100  <1>     cmp word [curCol], 1    ;If at top left, dont go back
+    99 0000011A 7458                <1>     je short ctrlFound
+   100 0000011C 66FF0DB2000000      <1>     dec word [curCol]
+   101 00000123 EB4F                <1>     jmp short ctrlFound
+   102                              <1> notBsp:
+   103 00000125 3C09                <1>     cmp al, TAB
+   104 00000127 751E                <1>     jne short notTab
+   105 00000129 50                  <1>     push rax
+   106 0000012A 0FB705A4000000      <1>     movzx eax, word [curCol]
+   107 00000131 0507000000          <1>     add eax, 7  ;Round up to next tabstop
+   108 00000136 25F8FFFFFF          <1>     and eax, ~7 ;Now divide by 8
+   109 0000013B FFC0                <1>     inc eax
+   110 0000013D 66890591000000      <1>     mov word [curCol], ax
+   111 00000144 58                  <1>     pop rax 
+   112 00000145 EB2D                <1>     jmp short ctrlFound
+   113                              <1> notTab:
+   114 00000147 3C07                <1>     cmp al, BEL
+   115 00000149 7429                <1>     je short ctrlFound
+   116                              <1>     ;Here we have a normal char so treat as normal
+   117 0000014B 66FF0583000000      <1>     inc word [curCol]
+   118 00000152 50                  <1>     push rax
+   119 00000153 0FB7057B000000      <1>     movzx eax, word [curCol]
+   120 0000015A 663B0570000000      <1>     cmp ax, word [numCols]
+   121 00000161 58                  <1>     pop rax
+   122 00000162 7610                <1>     jbe short ctrlFound
+   123 00000164 66FF056C000000      <1>     inc word [curRow]
+   124 0000016B 66C705610000000100  <1>     mov word [curCol], 1    ;Reset column
+   125                              <1> ctrlFound:
+   126 00000174 88C2                <1>     mov dl, al
+   127 00000176 B800020000          <1>     mov eax, 0200h  ;Output char in dl
+   128 0000017B CD41                <1>     int 41h
+   129 0000017D 50                  <1>     push rax
+   130 0000017E 0FB70552000000      <1>     movzx eax, word [curRow]
+   131 00000185 663B0547000000      <1>     cmp ax, word [numRows]
+   132 0000018C 58                  <1>     pop rax
+   133 0000018D 7235                <1>     jb short noMessage
+   134 0000018F 488D156B000000      <1>     lea rdx, moreStr
+   135 00000196 B800090000          <1>     mov eax, 0900h  
+   136 0000019B CD41                <1>     int 41h
+   137 0000019D B8080C0000          <1>     mov eax, 0C08h  ;Flush and wait for input with no echo
+   138 000001A2 CD41                <1>     int 41h
+   139 000001A4 488D1553000000      <1>     lea rdx, crlf
+   140 000001AB B800090000          <1>     mov eax, 0900h
+   141 000001B0 CD41                <1>     int 41h
+   142 000001B2 66C7051A0000000100  <1>     mov word [curCol], 1
+   143 000001BB 66C705130000000100  <1>     mov word [curRow], 1
+   144                              <1> noMessage:
+   145 000001C4 FFC9                <1>     dec ecx ;Decrement the count of chars to print
+   146 000001C6 0F84E8FEFFFF        <1>     jz bufferLoop   ;Get another buffer of data if buffer output
+   147 000001CC E91BFFFFFF          <1>     jmp getNextChar
+     6                                  %include "./Data/moredata.asm"
+     1                              <1> ;MORE data
+     2                              <1> ;Default size is 80x25 unless overwritten by successful IOCTL request
+     3 000001D1 5000                <1> numCols dw 80   ;Number of columns as a word, for high resolutions!
+     4 000001D3 1900                <1> numRows dw 25   ;Number of rows as a word! Reserve row 25 for -- MORE --
+     5 000001D5 0100                <1> curCol  dw 1    ;Current Column we are on
+     6 000001D7 0100                <1> curRow  dw 1    ;Current Row we are on 
+     7                              <1> 
+     8 000001D9 000000000000000000- <1> ioctlPkt    db displayInfoIOCTL_size dup (0)
+     8 000001E2 000000000000000000  <1>
+     9                              <1> 
+    10                              <1> ;Strings
+    11 000001EB 496E76616C69642044- <1> badVerStr   db "Invalid DOS Version"    ;Ends on the next line
+    11 000001F4 4F532056657273696F- <1>
+    11 000001FD 6E                  <1>
+    12 000001FE 0A0D24              <1> crlf        db LF,CR,"$"
+    13 00000201 0D2D2D204D6F726520- <1> moreStr     db CR,"-- More --$"
+    13 0000020A 2D2D24              <1>
+    14 0000020D 4E6F7420656E6F7567- <1> memErrStr   db "Not enough memory to paginate",LF,CR,"$"
+    14 00000216 68206D656D6F727920- <1>
+    14 0000021F 746F20706167696E61- <1>
+    14 00000228 74650A0D24          <1>
+    15                              <1> 
+    16 0000022D 0000000000000000    <1> bufferPtr   dq 0
+     7                                  ;Use a 20 QWORD stack
+     8 00000235 000000000000000000-         dq 20 dup (0)
+     8 0000023E 000000000000000000-
+     8 00000247 000000000000000000-
+     8 00000250 000000000000000000-
+     8 00000259 000000000000000000-
+     8 00000262 000000000000000000-
+     8 0000026B 000000000000000000-
+     8 00000274 000000000000000000-
+     8 0000027D 000000000000000000-
+     8 00000286 000000000000000000-
+     8 0000028F 000000000000000000-
+     8 00000298 000000000000000000-
+     8 000002A1 000000000000000000-
+     8 000002AA 000000000000000000-
+     8 000002B3 000000000000000000-
+     8 000002BC 000000000000000000-
+     8 000002C5 000000000000000000-
+     8 000002CE 00000000000000     
+     9                                  stackTop:
+    10 000002D5 90<rep Bh>                  align 10h
+    11                                  endOfAlloc:
+    11          ------------------       info: assembly required 1+2+2 passes
+

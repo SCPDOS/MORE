@@ -2,10 +2,10 @@
 [DEFAULT REL]
 BITS 64
 %include "./Include/moreinc.inc"
+Segment .text align=1 
 %include "./Source/moremain.asm"
 %include "./Data/moredata.asm"
-;Use a 20 QWORD stack
-    dq 20 dup (0)
-stackTop:
-    align 10h
+;Use a 45 QWORD stack
+Segment transient align=8 follows=.text nobits
+    dq 45 dup (?)
 endOfAlloc:

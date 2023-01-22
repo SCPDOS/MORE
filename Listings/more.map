@@ -11,20 +11,32 @@ Output file:  ./Binaries/MORE.COM
 -- Sections (summary) ---------------------------------------------------------
 
 Vstart            Start             Stop              Length    Class     Name
-               0                 0               2E0  000002E0  progbits  .text
+               0                 0               235  00000235  progbits  .text
+             238               238               3A0  00000168  nobits    transient
 
 -- Sections (detailed) --------------------------------------------------------
 
 ---- Section .text ------------------------------------------------------------
 
 class:     progbits
-length:                 2E0
+length:                 235
 start:                    0
-align:                   10
+align:                    1
 follows:   not defined
 vstart:                   0
 valign:    not defined
 vfollows:  not defined
+
+---- Section transient --------------------------------------------------------
+
+class:     nobits
+length:                 168
+start:                  238
+align:                    8
+follows:   not defined
+vstart:                 238
+valign:                   8
+vfollows:  .text
 
 -- Symbols --------------------------------------------------------------------
 
@@ -94,6 +106,9 @@ Real              Virtual           Name
              201               201  moreStr
              20D               20D  memErrStr
              22D               22D  bufferPtr
-             2D5               2D5  stackTop
-             2E0               2E0  endOfAlloc
+
+---- Section transient --------------------------------------------------------
+
+Real              Virtual           Name
+             3A0               3A0  endOfAlloc
 

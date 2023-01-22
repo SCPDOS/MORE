@@ -54,13 +54,14 @@
     50                              <1> SPC equ 20h ;Printable  | ASCII Space
     51                              <1> ;This last one is NEVER printed with a caret as it is a console control char
     52                              <1> DEL equ 7Fh ;^?         | ASCII Rubout (Del char and dec cursor)
-     5                                  %include "./Source/moremain.asm"
+     5                                  Segment .text align=1 
+     6                                  %include "./Source/moremain.asm"
      1                              <1> ;MORE main routine
      2                              <1> startMain:
      3 00000000 EB01                <1>     jmp short .cVersion
      4 00000002 01                  <1> .vNum:  db 1
      5                              <1> .cVersion:
-     6 00000003 488D25CB020000      <1>     lea rsp, stackTop   ;Move RSP to our internal stack
+     6 00000003 488D25(68010000)    <1>     lea rsp, endOfAlloc   ;Move RSP to our internal stack
      7                              <1> ;Do a version check since this version cannot check the number of rows/cols
      8 0000000A FC                  <1>     cld
      9 0000000B B430                <1>     mov ah, 30h
@@ -103,7 +104,7 @@
     46 00000083 31C9                <1>     xor ecx, ecx    ;Dup to STDIN for console control
     47 00000085 CD41                <1>     int 41h
     48                              <1> ;Now let us resize ourselves so as to take up as little memory as possible
-    49 00000087 BB[E0020000]        <1>     mov ebx, endOfAlloc
+    49 00000087 BB[68010000]        <1>     mov ebx, endOfAlloc
     50 0000008C B8004A0000          <1>     mov eax, 4A00h
     51 00000091 CD41                <1>     int 41h ;If this fails, we still proceed as we are just being polite!
     52                              <1> ;Now we now request a 4Kb buffer
@@ -202,7 +203,7 @@
    145 000001C4 FFC9                <1>     dec ecx ;Decrement the count of chars to print
    146 000001C6 0F84E8FEFFFF        <1>     jz bufferLoop   ;Get another buffer of data if buffer output
    147 000001CC E91BFFFFFF          <1>     jmp getNextChar
-     6                                  %include "./Data/moredata.asm"
+     7                                  %include "./Data/moredata.asm"
      1                              <1> ;MORE data
      2                              <1> ;Default size is 80x25 unless overwritten by successful IOCTL request
      3 000001D1 5000                <1> numCols dw 80   ;Number of columns as a word, for high resolutions!
@@ -226,27 +227,9 @@
     14 00000228 74650A0D24          <1>
     15                              <1> 
     16 0000022D 0000000000000000    <1> bufferPtr   dq 0
-     7                                  ;Use a 20 QWORD stack
-     8 00000235 000000000000000000-         dq 20 dup (0)
-     8 0000023E 000000000000000000-
-     8 00000247 000000000000000000-
-     8 00000250 000000000000000000-
-     8 00000259 000000000000000000-
-     8 00000262 000000000000000000-
-     8 0000026B 000000000000000000-
-     8 00000274 000000000000000000-
-     8 0000027D 000000000000000000-
-     8 00000286 000000000000000000-
-     8 0000028F 000000000000000000-
-     8 00000298 000000000000000000-
-     8 000002A1 000000000000000000-
-     8 000002AA 000000000000000000-
-     8 000002B3 000000000000000000-
-     8 000002BC 000000000000000000-
-     8 000002C5 000000000000000000-
-     8 000002CE 00000000000000     
-     9                                  stackTop:
-    10 000002D5 90<rep Bh>                  align 10h
+     8                                  ;Use a 45 QWORD stack
+     9                                  Segment transient align=8 follows=.text nobits
+    10 00000000 <res 168h>                  dq 45 dup (?)
     11                                  endOfAlloc:
     11          ------------------       info: assembly required 1+2+2 passes
 

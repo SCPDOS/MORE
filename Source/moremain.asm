@@ -3,7 +3,7 @@ startMain:
     jmp short .cVersion
 .vNum:  db 1
 .cVersion:
-    lea rsp, stackTop   ;Move RSP to our internal stack
+    lea rsp, endOfAlloc   ;Move RSP to our internal stack
 ;Do a version check since this version cannot check the number of rows/cols
     cld
     mov ah, 30h

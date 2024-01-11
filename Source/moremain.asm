@@ -7,15 +7,15 @@ startMain:
 ;Do a version check since this version cannot check the number of rows/cols
     cld
     mov ah, 30h
-    int 41h
+    int 21h
     cmp al, byte [.vNum]    ;Version number 1 check
     jbe short okVersion
     lea rdx, badVerStr
 badPrintExit:
     mov ah, 09h
-    int 41h
+    int 21h
     mov eax, 4CFFh
-    int 41h
+    int 21h
 okVersion:
 ;Now try to get screen size parameters from STDOUT.
 ; If generic IOCTL not supported, we assume a 80x25 resolution.
@@ -25,7 +25,7 @@ okVersion:
     mov ebx, 1      ;STDOUT handle
     mov ecx, 037Fh  ;Can this handle handle CON requests? (CH = 03)
     ;If so, can we get the display info? (CL = 7Fh)
-    int 41h
+    int 21h
     jc short noioctl
     movzx eax, word [rdx + displayInfoIOCTL.charCols]
     mov word [numCols], ax
@@ -34,25 +34,25 @@ okVersion:
 noioctl:
     lea rdx, crlf
     mov eax, 0900h
-    int 41h
+    int 21h
 
     xor ebx, ebx
     mov eax, 4500h  ;Dup STDIN
-    int 41h
+    int 21h
     movzx ebp, ax   ;Save in bp to use this as read handle
     
     mov eax, 4600h  ;Close STDIN and dup STDERR into STDIN
     mov ebx, 2      ;Handle to DUP (STDERR)
     xor ecx, ecx    ;Dup to STDIN for console control
-    int 41h
+    int 21h
 ;Now let us resize ourselves so as to take up as little memory as possible
     mov ebx, endOfAlloc
     mov eax, 4A00h
-    int 41h ;If this fails, we still proceed as we are just being polite!
+    int 21h ;If this fails, we still proceed as we are just being polite!
 ;Now we now request a 4Kb buffer
     mov eax, 4800h
     mov ebx, 100h   ;100h paragraphs = 4Kb buffer
-    int 41h
+    int 21h
     jnc memOk
     lea rdx, memErrStr
     jmp badPrintExit
@@ -63,7 +63,7 @@ bufferLoop:
     mov ecx, 1000h
     mov ebx, ebp
     mov eax, 3F00h  ;Read from handle in ebp
-    int 41h
+    int 21h
     test eax, eax ;Zero byte read?
     jnz short setReadSize
 exitGood:
@@ -71,10 +71,10 @@ exitGood:
     test r8, r8 ;If null ptr, skip freeing
     jz .noFree
     mov eax, 4900h  ;Else free!
-    int 41h
+    int 21h
 .noFree:
     mov eax, 4C00h
-    int 41h
+    int 21h
 setReadSize:
     mov ecx, eax    ;Set the number of bytes to output
     mov rsi, rdx    ;Move rsi as the source of chars
@@ -125,7 +125,7 @@ notTab:
 ctrlFound:
     mov dl, al
     mov eax, 0200h  ;Output char in dl
-    int 41h
+    int 21h
     push rax
     movzx eax, word [curRow]
     cmp ax, word [numRows]
@@ -133,12 +133,12 @@ ctrlFound:
     jb short noMessage
     lea rdx, moreStr
     mov eax, 0900h  
-    int 41h
+    int 21h
     mov eax, 0C08h  ;Flush and wait for input with no echo
-    int 41h
+    int 21h
     lea rdx, crlf
     mov eax, 0900h
-    int 41h
+    int 21h
     mov word [curCol], 1
     mov word [curRow], 1
 noMessage:

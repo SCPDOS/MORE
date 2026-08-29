@@ -1,4 +1,4 @@
 #!/bin/sh
 
 sys:
-	nasm more.asm -o ./Binaries/MORE.COM -f bin -l ./Listings/more.lst -O0v
+	nasm more.asm -o ./bin/MORE.COM -f bin -l ./lst/more.lst -O0v

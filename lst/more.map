@@ -2,7 +2,7 @@
 - NASM Map file ---------------------------------------------------------------
 
 Source file:  more.asm
-Output file:  ./Binaries/MORE.COM
+Output file:  ./bin/MORE.COM
 
 -- Program origin -------------------------------------------------------------
 
